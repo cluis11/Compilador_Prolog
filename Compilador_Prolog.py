@@ -2,11 +2,9 @@ import os;
 import sys;
 tipoPredicado="";
 global baseH
-baseH = [];
-baseR = [];
-inicio = False;
-
-
+baseH = [];#Lista donde se almacenaran los hechos
+baseR = [];#Lista donde se almacenaran las reglas
+inicio = False; #bandera para imprimir la información del compilador solo una vez
 
 #Menu principal del progra, en este se selcciona el modo a utilizar [definición, consulta]
 def menu():
@@ -24,11 +22,11 @@ def menu():
         if ((opcion=="<define>") or (opcion=="<consult>") or (opcion=="Exit")):
             break
         else:
-            print ("Modo incorrecto, los modos validos son <define> y consult\n")
+            print ("Modo incorrecto, los modos validos son <define> y <consult>\n")
             opcion = input ("Seleccione el modo en el que desea trabajar: ")
     #Si la opción es define entra el modo de definición de predicados
     if (opcion=="<define>"):
-        while(True):
+        while(True):    
             opcion1 = input ("Inserte el predicado: ")
             if opcion1 == "</define>":
                 break
@@ -40,33 +38,38 @@ def menu():
     #Como se valida que la opción debe ser valida si no entra al modo de definición entra al modo de consulta
     else:
         while(True):
-            cons=input ("-? ")
+            cons=input ("-? ")#Variable que almacena la consulta
             if (cons==""):
                 pass
-            elif (cons=="</consult>"):
+            elif (cons=="</consult>"):#validación para salir del modo consulta
                 break
             else:
-                consu=evalua(cons)
-                if isinstance(consu,list):
+                consu=evalua(cons)#Variable que almacena el resultado de la consulta
+                if isinstance(consu,list):#En caso de hacer backtracking
+                    constante=consu[0]
                     c=0
-                    while (c<len(consu)):
-                        print (consu[c])
-                        cons=input ("-? ")
-                        if cons==";":
-                            c+=1
-                        elif cons==".":
-                            break
+                    for e in consu[1:]:
+                        print (constante,": ",e)
+                        if (c<=len(cons)):
+                            cons=input()
+                            if cons==";":#validación para mostrar otro valor de la consulta
+                                c+=1
+                            elif cons==".":
+                                print ("Yes.")
+                                break
+                            else:
+                                print ("Error")
+                                break
                         else:
-                            print ("Error")
-                            break
+                            print ("Yes.") #Imprime Yes al final de la consulta
                 else:
-                    if  isinstance(evalua(cons),bool):
+                    if  isinstance(consu,bool): #Si el valor de consu es un booleano
                         if evalua(cons):
-                            print ("Yes")
+                            print ("Yes.")
                         else:
-                            print ("No")
+                            print ("No.")
                     else:
-                        print (evalua(cons))
+                        print (consu) #Imprime el mensaje de error
         menu()
 ########################################################################################################################
 
@@ -130,10 +133,10 @@ def sintaxisHecho(predicado, flag):
         argumento = "";
         functor = (predicado.split("(")[0]);
         argumentoAux = (predicado.split("(")[1]);
-        print(argumento); 
+        ##print(argumento); 
 
         for aux in functor:
-            if (aux.isalnum () != True):
+            if ((aux.isalnum() != True) and (aux != "_")):
                 print("Sintaxis del hecho incorrecta")
                 return False
         #Validación de argumentos
@@ -153,7 +156,7 @@ def sintaxisHecho(predicado, flag):
                         if ((argumentoAux[aux2-1].isalnum()== True) and (argumentoAux[aux2+1].isalnum())== True):
                             print("Sintaxis del hecho incorrecta")
                             return False;    
-                    if (argumentoAux[aux2].isalnum != True and (argumentoAux[aux2] != "," and  argumentoAux[aux2] != "." and argumentoAux[aux2]!= "_")):
+                    if (argumentoAux[aux2].isalnum() != True and (argumentoAux[aux2] != "," and  argumentoAux[aux2] != "." and argumentoAux[aux2]!= "_")):
                         print("El caracter: " + argumentoAux[aux2] +",no es valido.")
                         return False;
         
@@ -177,7 +180,6 @@ def sintaxisHecho(predicado, flag):
             agmnto =  "";
             for i in argumento:
                 if (i == "," or i ==")"):
-                    print(agmnto);
                     listaArgumentos.append(agmnto)
                     agmnto = "";
                 else:
@@ -187,7 +189,7 @@ def sintaxisHecho(predicado, flag):
             #Ingresa a la lista
             temp = [functor,contArgs,listaArgumentos];
             baseH.append(temp)
-            print(baseH)
+            print("Predicado correcto.")
         else:
             return True;
     else:
@@ -215,30 +217,36 @@ def sintaxisRegla(predicado, flag):
     validar = predicado.split(":-")[0]+".";
     validar2 = predicado.split(":-")[1];
     hecho = "";
-    if(sintaxisHecho(validar, flag)==True):
-        for aux in validar2:
-            if(aux == ",") or (aux==";"):
-                hecho = hecho+".";
-                validar2 = validar2[1:]; #Quitar la , o ; que queda 
-                if (sintaxisHecho(hecho, flag)== True):
-                    existeFunctor(hecho);
-                    hecho = "";
-                else:
-                    print("Ok!");
-                    return False;
-                
-            if (aux == "."):
+    if((sintaxisHecho(validar, flag)==True) and (predicado[len(predicado)-1]==".")):
+        for aux in range(len(validar2)):
+
+            if (validar2[0] == "."):
                 hecho = hecho+".";
                 if(sintaxisHecho(hecho,flag)== True):
                     existeFunctor(hecho);
                     ingresarHechos(predicado);
                     break;
                 else:
-                    print("Ok!")
+                    print("predicado incorrecto. Ingrese de nuevo")
                     return False;
+                
+            if(validar2[0]== ")"):
+                if ((validar2[0+1] == ",") or (validar2[0+1]==";")):
+                    hecho = (hecho + validar2[0]);
+                    hecho = hecho+".";
+                    validar2 = validar2[2:]; #Quitar la , o ; que queda 
+                    if (sintaxisHecho(hecho, flag)== True):
+                        existeFunctor(hecho);
+                        hecho = "";
+                    else:
+                        print("predicado incorrecto. Ingrese de nuevo");
+                        return False;
+                if (validar2[0+1] == "."):
+                    hecho = (hecho + validar2[0]);
+                    validar2 = validar2[1:];
             else:
                 hecho = (hecho + validar2[0]);
-                validar2 = validar2[1:];
+                validar2 = validar2[1:];   
     else:
         print("Error en la escritura de la regla")
         return False;
@@ -254,8 +262,8 @@ def ingresarHechos(predicado):
             listaTemp = [predicado];
             baseR.append(listaTemp);
         outfile.write(predicado + '\n');
-        print('>>> Escritura de fichero sobreescribiendo su contenido.');
-        outfile.close();      
+        print('>>> Agregado a la base de conocimientos.');
+        outfile.close();  
 
 ##########################################################################################
 
@@ -299,7 +307,7 @@ def cambia():
         tempL[c][3]=L
         L=tempL[c][3]
         c1=0
-        while (c1<len(L)):
+        while (c1<len(L)): #While para darle formato a los hechos dentro de la regla
             if (L[c1]!=";"):
                 L[c1]=cambia_predicado(L[c1])
             c1+=1
@@ -309,36 +317,60 @@ def cambia():
 
 #Esta función se encarga de resolver consultas de hechos.
 def consultaH(var):
-    for i in baseH:
-        if (i[:-1]==var[:-1]):
-            temp1=var[2]
-            temp2=i[2]
-            cont=0
-            if (temp1==temp2):
-                return True
-            res=True
-            while (cont<var[1]):
-                if (temp1[cont]==temp2[cont]):
-                    cont+=1
-                else:
-                    if (temp1[cont]=='_'):
+    temp1=var[2]
+    flag=False #Bandera para determinar si hay variables en la consulta
+    back=[]#Lista donde se almacenan los valores en caso de haber variables
+    for e in temp1:  #Se determinan si hay variables dentro de la consulta
+                if e[0].isupper():
+                    back.append(e)
+                    flag=True
+                    break
+    if flag: #En caso de haber variables
+        for i in baseH:
+            if (i[:-1]==var[:-1]): #Si el funtor y la arirdad son iguales
+                temp2=i[2]
+                cont=0
+                while (cont<var[1]):
+                    #Se verifica si la consulta es verdadera
+                    if temp1[cont]==temp2[cont]:
+                        cont+=1
+                    elif (temp1[cont][0].isupper()):
+                        back.append(temp2[cont])
                         cont+=1
                     else:
-                        res=False
                         break
-            if (res):
-                return True
-    return False
+        return back #Lista con los valores de la consulta
+    else:
+        for i in baseH:
+            if (i[:-1]==var[:-1]):
+                temp2=i[2]
+                cont=0
+                if (temp1==temp2):
+                    return True
+                res=True
+                while (cont<var[1]):
+                    #Se verifica si la consulta es correcta
+                    if (temp1[cont]==temp2[cont]):
+                        cont+=1
+                    else:
+                        if (temp1[cont]=='_'):
+                            cont+=1
+                        else:
+                            res=False
+                            break
+                if (res):
+                    return True
+        return False
 
 #Esta función se encarga de resolver consultas de reglas.
 def consultaR(var):
     tempL=cambia()
-    resul=[]
-    temp=[]
+    resul=[]#Lista que almacena los resultados de los hechos dentro de la consulta
+    temp=[]#variable temporal
     flag=False
     flag2=True
     for i in tempL:
-        if (i[:-2]==var[:-1]):
+        if (i[:-2]==var[:-1]): #Se revisa la aridad y el funtor
             c=0
             while (c<len(i[2])):
                 temp.append([var[2][c],i[2][c]])
@@ -427,9 +459,9 @@ def write(sentencia):
             if ele=="'":
                 strin="pe"
         if strin!="pe":
-            print(sentencia[7:contador] + "\n")
+            return sentencia[7:contador] + "\n"
         else:
-            print("error lexico")
+            return "error lexico"
     elif sentencia[contador+3:]=="').":
         bandera=[]
         bandera2=True
@@ -450,8 +482,8 @@ def write(sentencia):
             else:
                 print("error lexico")
                 break
-        print(string)
+        return string
     else:
-        print("error de sintaxis")
+        return "error de sintaxis"
 
-
+menu()
